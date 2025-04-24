@@ -1,10 +1,14 @@
 # Load numpy Module
+from numbers import Complex
 import numpy as np
+from numpy._core.multiarray import dtype
+from numpy._core.numeric import identity
 
-# Main Class Definition
-class QMSolver:
+# Gross-Pitaevskii Solver
+# Adaptation of QM Solver for Linear Schrodinger Equation
+class GPESolver:
     """
-    A class for solving the time-dependent Schrödinger equation using the Crank-Nicolson scheme.
+    Class implementation for solving the GPE PDE using the Crank-Nicolson scheme.
 
     Parameters:
         dt (float): Time step.
@@ -12,7 +16,7 @@ class QMSolver:
         n (int): Number of grid points.
         steps (int): Number of time steps.
     """
-    def __init__(self, dt: float, dx: float, n: int, steps: int):
+    def __init__(self, dt: float, dx: float, n: int, steps: int, g:float, hbar: float = 1.0, mass: float = 1.0):
         """
         Args:
             dt: delta t
@@ -21,14 +25,20 @@ class QMSolver:
             steps: number of time steps (time-evolution)
         """
         self.dt = dt
+        self.dx = dx
         self.n = n
         self.steps = steps
+        self.g = g
+        self.hbar = hbar
+        self.mass = mass
+
         self.x = None
-        self.dx = dx
+
         self.psi = None
         self.psi_total = None
         self.potential = None
-        self.hamiltonian = None
+        self.potential_ext = None
+        self.linear_hamiltonian = None
 
     def create_grid(self, x_min: float, x_max: float):
         """
@@ -86,6 +96,16 @@ class QMSolver:
         """
         self.potential = np.abs(self.x)
         return self.potential
+
+    def normalize_psi(self):
+        """Normalizes the current wavefunction self.psi."""
+        if self.psi is not None:
+            norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.dx)
+            if norm > 1e-12: # Avoid division by zero
+                    self.psi = self.psi / norm
+            else:
+                print("Warning: Wavefunction norm is close to zero.")
+        return self.psi
 
     def potential_barrier(self, v0, x_left, x_right):
         """
@@ -179,3 +199,28 @@ class QMSolver:
             # Append the wave function to psi total
             self.psi_total.append(self.psi)
         return self.psi_total
+
+    def solve_gpe_crank_nicolson(self):
+        if  self.psi == None:
+            raise ValueError("Initial wavefunction must be set first.")
+        if self.potential_ext is None:
+            print("Warning: Exrernal potential not explicitly set. Using a zero potential.")
+        # Set potential to zero
+        self.creaate_linear_hamiltonian_cn()
+        self.psi_total = [self.psi.copy()]
+        identity_matrix = np.identity(self.n, dtype=Complex)
+        c = 1j + self.dt / (2*self.hbar)
+        for _ in range(self.steps):
+            nonlinear_potential = self.g * np.abs(self.psi)**2
+
+            effective_Hamiltonian = self.linear_hamiltonian() + np.diag(nonlinear_potential)
+
+            # Build the Crank-Nicholson Matrices
+            forward_matrix  = identity_matrix + c * effective_Hamiltonian
+            backward_matrix = identity_matrix - c * effective_Hamiltonian
+            rhs = backward_matrix @ self.psi
+            self.psi = np.linalg.solve(forward_matrix, rhs)
+            # Normalize the wave fucntion
+
+            self.psi_total.append(self.psi.copy())
+        return np.array(self.psi_total)
