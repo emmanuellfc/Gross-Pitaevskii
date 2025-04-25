@@ -1,5 +1,4 @@
 # Load numpy Module
-from numbers import Complex
 import numpy as np
 from numpy._core.multiarray import dtype
 from numpy._core.numeric import identity
@@ -40,6 +39,8 @@ class GPESolver:
         self.potential_ext = None
         self.linear_hamiltonian = None
 
+        self.kinetic_coeff = self.hbar**2 / (2*self.mass *self.dx**2)
+
     def create_grid(self, x_min: float, x_max: float):
         """
         Create Space Grid
@@ -53,10 +54,21 @@ class GPESolver:
         self.x = np.linspace(x_min, x_max, self.n)
         return self.x
 
+    def normalize_psi(self):
+        """Normalizes the current wavefunction self.psi."""
+        if self.psi is not None:
+            norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.dx)
+            if norm > 1e-12: # Avoid division by zero
+                    self.psi = self.psi / norm
+            else:
+                print("Warning: Wavefunction norm is close to zero.")
+        return self.psi
+
     def gaussian_wave_packet(self, x0, sigma, k0):
         """Generates a Gaussian wave packet."""
         A = (1 / (sigma * np.sqrt(np.pi))) ** 0.5
         self.psi = A * np.exp(-(self.x - x0) ** 2 / (2 * sigma ** 2)) * np.exp(1j * k0 * self.x)
+        self.normalize_psi()
         return self.psi
 
     def gaussian_wave(self):
@@ -66,6 +78,19 @@ class GPESolver:
             - Numpy array with initial condition
         """
         self.psi = (1/np.pi**0.25) * np.exp(-0.5*self.x**2)
+
+
+    # Declare External Potentials
+    def set_potential(self, potential_array:np.ndarray):
+        if potential_array.shape != (self.n,):
+            raise ValueError(f"Potential array {potential_array.shape} must match grid size ({self.n},).")
+        self.potential_ext = potential_array.astype(complex)
+
+    def potential_zero(self):
+        if self.x is None:
+            raise ValueError("Grid must be created before setting the potential.")
+        self.potential_ext = np.zeros_like(self.x, dtype=complex)
+        return self
 
     def sw_potential(self):
         """
@@ -97,16 +122,6 @@ class GPESolver:
         self.potential = np.abs(self.x)
         return self.potential
 
-    def normalize_psi(self):
-        """Normalizes the current wavefunction self.psi."""
-        if self.psi is not None:
-            norm = np.sqrt(np.sum(np.abs(self.psi)**2) * self.dx)
-            if norm > 1e-12: # Avoid division by zero
-                    self.psi = self.psi / norm
-            else:
-                print("Warning: Wavefunction norm is close to zero.")
-        return self.psi
-
     def potential_barrier(self, v0, x_left, x_right):
         """
         Create a Potential Barrier
@@ -124,98 +139,43 @@ class GPESolver:
                 self.potential[i] = v0
         return self.potential
 
-    def create_hamiltonian_fd(self):
-        """
-        Construct the Hamiltonian matrix following a Finite-Difference Scheme
-        Returns:
-            - Square matrix of the Hamiltonian
-        """
-        self.hamiltonian = np.zeros((self.n, self.n), dtype=complex)  # Initialize A as a complex matrix
-        c = self.dt / (1j * self.dx ** 2)
-        for j in range(self.n):
-            self.hamiltonian[j, j] = 1 + 2 * c - 1j * self.dt * 10*self.potential[j]**2  # Diagonal elements
-            if j > 0:
-                self.hamiltonian[j, j - 1] = -c  # Lower diagonal
-            if j < self.n - 1:
-                self.hamiltonian[j, j + 1] = -c  # Upper diagonal
-        return self.hamiltonian
+    def create_linear_hamiltonian(self):
+        if self.potential_ext is None:
+            raise ValueError("External potential must be set before creating the Hamiltonian.")
 
-    def create_hamiltonian_cn(self):
-        """
-        Construct the Hamiltonian matrix following a Crank-Nicolson Scheme
-        Returns:
-            - Square matrix of the Hamiltonian
-        """
-        # Construct the Hamiltonian matrix
-        c: float = - 1 / (2 * self.dx ** 2)
-        self.hamiltonian = np.zeros((self.n, self.n), dtype=complex)
-        for i in range(1, self.n - 1):
-            self.hamiltonian[i, i] = 2 * c + self.potential[i]
-            self.hamiltonian[i, i] = 2 * c
-            self.hamiltonian[i, i + 1] = -c
-            self.hamiltonian[i, i - 1] = -c
-        return self.hamiltonian
+        diag_kin = 2.0 * self.kinetic_coeff
+        offdiag_kin = -1.0 * self.kinetic_coeff
+        self.linear_hamiltonian = np.zeros((self.n, self.n), dtype=complex)
+        # Fill diagonal elements
+        np.fill_diagonal(self.linear_hamiltonian, diag_kin+self.potential_ext)
+        # Fill non-diagonal elements of the matrix
+        indices = np.arange(self.n-1)
+        self.linear_hamiltonian[indices, indices+1] = offdiag_kin
+        self.linear_hamiltonian[indices+1, indices] = offdiag_kin
 
-    def solve_finite_difference(self):
-        """
-        Solve the system using a Finite Difference Scheme
-        Returns:
-            Wave function at all times"""
-
-        # Time evolution
-        self.psi_total = []
-        for n in range(self.steps):
-            # Add psi squared to the Hamiltonian
-            # for i in range(1, self.n - 1):
-            #     print(self.psi[i])
-            #     # print(foo.size)
-            #     self.hamiltonian[i, i] += self.psi[i]**2
-            # Solve for psi
-            self.psi = np.linalg.solve(self.hamiltonian, self.psi)
-            self.psi = self.psi / np.sqrt(np.sum(np.abs(self.psi) ** 2) * self.dx)
-            # Append the wave function to psi total
-            self.psi_total.append(self.psi)
-        return self.psi_total
-
-    def solve_crank_nicolson(self):
-        """
-        Solve the system using a Crank Nisolson Scheme
-        Returns:
-            Wave function at all times
-        """
-        identity_matrix = np.identity(self.n, dtype=complex)
-        # Create matrices A and B
-        forward_matrix  = identity_matrix + (1j / 2) * self.hamiltonian * self.dt
-        backward_matrix = identity_matrix - (1j / 2) * self.hamiltonian * self.dt
-        # Time evolution
-        self.psi_total = []
-        for n in range(self.steps):
-            #
-
-            # Solve the linear system
-            self.psi = np.linalg.solve(forward_matrix, backward_matrix @ self.psi)
-            # Normalize the wave-function
-            self.psi = self.psi / np.sqrt(np.sum(np.abs(self.psi) ** 2) * self.dx)
-            # Append the wave function to psi total
-            self.psi_total.append(self.psi)
-        return self.psi_total
+        return self.linear_hamiltonian
 
     def solve_gpe_crank_nicolson(self):
         if  self.psi == None:
             raise ValueError("Initial wavefunction must be set first.")
         if self.potential_ext is None:
             print("Warning: Exrernal potential not explicitly set. Using a zero potential.")
-        # Set potential to zero
-        self.creaate_linear_hamiltonian_cn()
+            self.potential_zero()
+        # 1. Create the time-dependent linear part of H
+        self.create_linear_hamiltonian()
+
+        # 2. Setup time evolution
         self.psi_total = [self.psi.copy()]
-        identity_matrix = np.identity(self.n, dtype=Complex)
+        identity_matrix = np.identity(self.n, dtype=complex)
+
         c = 1j + self.dt / (2*self.hbar)
+
         for _ in range(self.steps):
+            # 3. Include non-linear potential (from GPE equation)
             nonlinear_potential = self.g * np.abs(self.psi)**2
-
-            effective_Hamiltonian = self.linear_hamiltonian() + np.diag(nonlinear_potential)
-
-            # Build the Crank-Nicholson Matrices
+            # 4. Build the effective (full) Hamiltonian
+            effective_Hamiltonian = self.linear_hamiltonian + np.diag(nonlinear_potential)
+            # 5. Crank-Nicolson matrices A and B
             forward_matrix  = identity_matrix + c * effective_Hamiltonian
             backward_matrix = identity_matrix - c * effective_Hamiltonian
             rhs = backward_matrix @ self.psi
