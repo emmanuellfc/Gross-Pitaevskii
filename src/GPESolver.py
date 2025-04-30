@@ -1,8 +1,4 @@
-# Load numpy Module
 import numpy as np
-from numpy._core.multiarray import dtype
-from numpy._core.numeric import identity
-
 # Gross-Pitaevskii Solver
 # Adaptation of QM Solver for Linear Schrodinger Equation
 class GPESolver:
@@ -32,7 +28,6 @@ class GPESolver:
         self.mass = mass
 
         self.x = None
-
         self.psi = None
         self.psi_total = None
         self.potential = None
@@ -50,7 +45,6 @@ class GPESolver:
         Returns:
             - Numpy array
         """
-        # self.dx = (x_max - x_min)/self.n
         self.x = np.linspace(x_min, x_max, self.n)
         return self.x
 
@@ -78,7 +72,6 @@ class GPESolver:
             - Numpy array with initial condition
         """
         self.psi = (1/np.pi**0.25) * np.exp(-0.5*self.x**2)
-
 
     # Declare External Potentials
     def set_potential(self, potential_array:np.ndarray):
@@ -111,7 +104,6 @@ class GPESolver:
         """
         self.potential = 0.5 * self.x ** 2
         return self.potential
-
 
     def tw_potential(self):
         """
@@ -167,9 +159,9 @@ class GPESolver:
         # 2. Setup time evolution
         self.psi_total = [self.psi.copy()]
         identity_matrix = np.identity(self.n, dtype=complex)
-
         c = 1j + self.dt / (2*self.hbar)
 
+        # Perform Time Evolution
         for _ in range(self.steps):
             # 3. Include non-linear potential (from GPE equation)
             nonlinear_potential = self.g * np.abs(self.psi)**2
