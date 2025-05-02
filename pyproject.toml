@@ -21,6 +21,8 @@ gross_pitaevskii = { path = ".", editable = true }
 [tool.pixi.dependencies]
 numpy = ">=2.2.4,<3"
 matplotlib = ">=3.10.1,<4"
+ipykernel = ">=6.29.5,<7"
+scipy = ">=1.15.2,<2"
 
 [tool.pyright]
 venvPath = "."
