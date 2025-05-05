@@ -46,7 +46,7 @@ def animate_psi(time_series_data, t_steps, filename, label, color):
     line, = ax.plot(time_series_data[0, :, 0], time_series_data[0, :, 1], color=color)  # Initial plot
     ax.set_xlim(np.min(time_series_data[:, :, 0]), np.max(time_series_data[:, :, 0]))
     ax.set_ylim(np.min(time_series_data[:, :, 1]), np.max(time_series_data[:, :, 1]))
-    ax.set_title(filename)
+    # ax.set_title(filename)
     ax.set_xlabel("x")
     ax.set_ylabel(label)
 
