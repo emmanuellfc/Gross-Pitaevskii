@@ -59,8 +59,8 @@ class GPESolver:
         """Generates a Gaussian wave packet."""
         if self.x is None:
             raise ValueError("Grid must be created before setting initial wavefunction.")
-        # Normalization constant A ensures integral |psi|^2 dx = 1
-        A = (1 / (sigma * np.sqrt(2*np.pi)))**0.5 # Correction for Gaussian normalization
+        # Normalization to ensure |psi|^2 dx = 1
+        A = (1 / (sigma * np.sqrt(2*np.pi)))**0.5
         gaussian_part = np.exp(-(self.x - x0)**2 / (2 * sigma**2))
         plane_wave_part = np.exp(1j * k0 * self.x)
         self.psi = A * gaussian_part * plane_wave_part
@@ -72,8 +72,8 @@ class GPESolver:
         """Generates a simple centered Gaussian (approx ground state for some potentials)."""
         if self.x is None:
             raise ValueError("Grid must be created before setting initial wavefunction.")
-         # Normalization constant A ensures integral |psi|^2 dx = 1
-        A = (1 / (sigma * np.sqrt(2*np.pi)))**0.5 # Correction for Gaussian normalization
+         # Normalization to ensure |psi|^2 dx = 1
+        A = (1 / (sigma * np.sqrt(2*np.pi)))**0.5
         self.psi = A * np.exp(-self.x**2 / (2 * sigma**2))
         self.normalize_psi()
         return self.psi
@@ -118,7 +118,7 @@ class GPESolver:
         self.potential_ext[mask] = v0
         return self.potential_ext
 
-    # --- Hamiltonian Construction ---
+    # --- Hamiltonian ---
     def create_linear_hamiltonian(self):
         """
         Construct the time-independent LINEAR part of the Hamiltonian matrix H = T + V_ext
@@ -136,7 +136,6 @@ class GPESolver:
         diag_kin = 2.0 * self.kinetic_coeff
         offdiag_kin = -1.0 * self.kinetic_coeff
 
-        # Create Hamiltonian matrix (consider scipy.sparse.diags for efficiency)
         self.hamiltonian_linear = np.zeros((self.n, self.n), dtype=complex)
 
         # Fill diagonal (Kinetic + External Potential)
@@ -170,9 +169,9 @@ class GPESolver:
             self.potential_zero()
 
         # 1. Create the time-independent linear part of the Hamiltonian matrix (T + V_ext)
-        self.create_linear_hamiltonian() # Stores result in self.hamiltonian_linear
+        self.create_linear_hamiltonian()
 
-        # 2. Prepare for time evolution
+        # 2. Prepare time evolution
         self.psi_total = [self.psi.copy()] # Store initial state
         identity_matrix = np.identity(self.n, dtype=complex)
         const_factor = 1j * self.dt / (2 * self.hbar)
@@ -185,7 +184,6 @@ class GPESolver:
 
             # 4. Construct the effective Hamiltonian for this step H_eff = H_linear + V_nl(psi_n)
             # We add V_nonlinear to the diagonal of the linear Hamiltonian matrix
-            # Avoid modifying self.hamiltonian_linear directly if you need it later
             H_effective = self.hamiltonian_linear + np.diag(V_nonlinear)
 
             # 5. Construct the Crank-Nicolson matrices A and B
@@ -198,20 +196,14 @@ class GPESolver:
             rhs_vector = backward_matrix @ self.psi
 
             # 7. Solve the linear system A * psi_{n+1} = RHS for psi_{n+1}
-            # Use np.linalg.solve for dense matrices
-            # Use scipy.sparse.linalg.spsolve if using sparse matrices
             try:
                 self.psi = np.linalg.solve(forward_matrix, rhs_vector)
             except np.linalg.LinAlgError:
                  print(f"Error: Linear system solve failed at step {_ + 1}. Matrix might be singular.")
-                 # Consider smaller dt or different parameters
-                 # You might want to stop or handle this error differently
                  break
-
 
             # 8. Normalize the wavefunction (optional but recommended for GPE)
             # GPE conserves norm, but numerical errors can accumulate.
-            # Normalization ensures the total particle number remains constant (usually N=1 here).
             self.normalize_psi()
 
             # 9. Store the result

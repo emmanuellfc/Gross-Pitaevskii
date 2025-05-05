@@ -28,7 +28,7 @@ x_grid = solver.create_grid(X_MIN, X_MAX)
 # Moving Gaussian Packet
 X0 = -5.0  # Initial position
 SIGMA0 = 1.0 # Initial width
-K0 = 2.0   # Initial momentum (velocity = hbar*k0/m)
+K0 = 2.0   # Initial momentum
 solver.gaussian_wave_packet(x0=X0, sigma=SIGMA0, k0=K0)
 
 # --- Set External Potential ---
@@ -39,9 +39,9 @@ solver.set_potential(solver.potential_sho(omega=OMEGA_TRAP))
 # --- Solve ---
 print("Starting GPE simulation...")
 psi_evolution = solver.solve_gpe_crank_nicolson()
-print(f"Simulation finished. Psi evolution shape: {psi_evolution.shape}") # (steps+1, n)
+print(f"Simulation finished. Psi evolution shape: {psi_evolution.shape}")
 
-# Make animation
+# Make animations
 fname = "Test_GPE_Solver"
 fname_real = "Test_GPE_Solver_Real"
 fname_imag = "Test_GPE_Solver_Imag"
