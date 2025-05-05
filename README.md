@@ -2,10 +2,10 @@
 
 This code implements a simulation framework for a Bose-Einstein Condensate (BEC), combining the Gross-Pitaevskii Equation (GPE) with a Metropolis-like stochastic algorithm.
 
-The main source files for running simulations are located in the `/src` directory. A brief summary of the purposes of each script is included below: <br/>
-GPESolver.py: Functions used in solving the GPE equation <br/>
-metropolis.py: Functions used in running the stochastic algorithm <br/>
-help_functions.py: Accessory functions, including those needed for animations
+The main source files for running simulations are located in the `/src` directory. A brief summary of the purposes of each script is included below: <br/><br/>
+`GPESolver.py`: Functions used in solving the GPE equation <br/>
+`metropolis.py`: Functions used in running the stochastic algorithm <br/>
+`help_functions.py`: Accessory functions, including those needed for animations
 
 The scripts `Harmonic_Trap.py` and `Metropolis_Stochastic.py`, also within `/src`, provide an example of how to utilize the GPE and stochastic codes respectively. 
 
