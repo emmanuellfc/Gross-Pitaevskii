@@ -30,11 +30,12 @@ V=grid**2/2
 iterations=1000
 temperature=10
 
+#run stochastic algorithm for two different temperatures
 psi_array, psi_sq_array, entropy_array=loop_stochastic(hbar, mass, g_param, k_boltz, mu_chem_potential, c1_val, c2_val, c3_val, v_val, phase, u, x_end, x_start, num_steps, grid, psi_0, V, iterations, temperature)
 psi_array2, psi_sq_array2, entropy_array2=loop_stochastic(hbar, mass, g_param, k_boltz, mu_chem_potential, c1_val, c2_val, c3_val, v_val, phase, u, x_end, x_start, num_steps, grid, psi_0, V, iterations, 20)
 
 fname = "Metropolis"
 label= r"$|\psi|^2$"
 steps = iterations
-time_series = generate_time_series_psi_squared_stochastic(grid, psi_sq_array, steps)
-animate_psi(time_series, steps, fname, label, "magenta")
+#time_series = generate_time_series_psi_squared_stochastic(grid, psi_sq_array, steps)
+#animate_psi(time_series, steps, fname, label, "magenta")
