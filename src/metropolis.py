@@ -4,7 +4,21 @@ from scipy import integrate
 import random
 
 def calc_s0(psi_init, h, m, g, mu, k, x_max, x_min, steps,x_vec,temp,potential):
-    
+    """
+    Function for calculating the "reduced entropy" of the system as defined in: https://www.sciencedirect.com/science/article/pii/S0010465514001015?ref=pdf_download&fr=RR-2&rr=93b18ea3f8b58f84"
+
+    Parameters:
+        psi_init (array): initial wave function 
+        h, m, g, mu, k (float): constants originally set to 1
+        x_max (float): max position bound
+        x_min (float): min position bound
+        steps (int): number of steps between min and max position
+        x_vec (array): grid of position points
+        temp (float): temperature
+        potential (array): array of potential values at different positions
+
+    Returns: Reduced entropy
+    """
     #normalize psi_init
     dx=(x_max-x_min)/steps
     psi_init=psi_init/np.sqrt(np.sum(np.abs(psi_init)**2)*dx)
@@ -43,6 +57,20 @@ def calc_s0(psi_init, h, m, g, mu, k, x_max, x_min, steps,x_vec,temp,potential):
 
 def check_func(s0_final, s0_init, psi_new,psi_old,x_max, x_min, steps):
 
+    """
+    Accepts or rejects proposed wave function based on reduced entropies.
+
+    Parameters:
+        s0 final (float): reduced entropy for proposed wave function  
+        s0_init (float): reduced entropy for initial wave function 
+        psi_new (array): proposed wave function
+        psi_old (array): initial wave function
+        x_max (float): max position bound
+        x_min (float): min position bound
+        steps (int): number of steps between min and max position
+
+    Returns: Reduced entropy of accepted wave function, accepted wave function
+    """
     dx=(x_max-x_min)/steps
     a=np.exp(s0_final-s0_init)
     print("value of a is: ", a)
@@ -75,11 +103,11 @@ def normalize(wave_function, x_start, x_end, num_steps):
     """
     Normalize the wave function.
         Parameters: 
-            - Wave Function: array
-            - x_start
-            - x_end
-            - dx
-            - num steps
+            - wave_function (array)
+            - x_start (float)
+            - x_end (float)
+            - num_steps (int)
+    Returns: normalized wave function
     """
     dx = (x_end-x_start)/num_steps
     psi_normalized = wave_function/np.sqrt(np.sum(np.abs(wave_function)**2)*dx)
@@ -88,6 +116,23 @@ def normalize(wave_function, x_start, x_end, num_steps):
 
 def loop_stochastic(h, m, g, k, mu, c1, c2, c3, v, phi, u, x_max, x_min, nsteps, xgrid, initial_wave_func, potential_func, iterations, temp):
 
+    """
+    Runs metropolis algorithm for perturbations to BEC
+
+    Parameters: 
+        h, m, g, k, mu, c1, c2, c3, v, u: constants originally set to 1
+        phi (float): phase
+        x_min (float): min position bound
+        x_max (float): max position bound
+        nsteps (int): number of steps between min and max position
+        xgrid (array): grid of position points
+        intial_wave_func (array):
+        potential_func (array):
+        iterations (int):
+        temp (float):
+
+    Returns: array of wave functions, array of probability densities, array of entropies
+    """
     #Define initial and boundary conditions
     iter=0
     entropy_store=[]
@@ -127,10 +172,13 @@ def loop_stochastic(h, m, g, k, mu, c1, c2, c3, v, phi, u, x_max, x_min, nsteps,
         entropy_store.append(accepted_s)
         psi_store.append(initial_wave_func)
 
+        #normalize wave function
         initial_wave_func = normalize(initial_wave_func, x_min, x_max, nsteps)
         
+        #calculate probability density
         psi_sq=np.conjugate(initial_wave_func)*initial_wave_func
         
+        #normalize probability density
         psi_sq = normalize(psi_sq, x_min, x_max, nsteps)
         psi_sq_store.append(psi_sq.copy())
         
