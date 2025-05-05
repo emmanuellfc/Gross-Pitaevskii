@@ -37,5 +37,5 @@ psi_array2, psi_sq_array2, entropy_array2=loop_stochastic(hbar, mass, g_param, k
 fname = "Metropolis"
 label= r"$|\psi|^2$"
 steps = iterations
-#time_series = generate_time_series_psi_squared_stochastic(grid, psi_sq_array, steps)
-#animate_psi(time_series, steps, fname, label, "magenta")
+time_series = generate_time_series_psi_squared_stochastic(grid, psi_sq_array, steps)
+animate_psi(time_series, steps, fname, label, "magenta")
